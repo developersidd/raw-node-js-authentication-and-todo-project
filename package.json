@@ -1,0 +1,9 @@
+{
+  "dependencies": {
+    "rimraf": "^3.0.2"
+  },
+"scripts": {
+  "start": "nodemon ./raw-nodejs/index.js",
+  "dev": "nodemon ./raw-nodejs/index.js"
+}
+}
