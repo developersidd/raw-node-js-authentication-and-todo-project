@@ -103,6 +103,8 @@ handler.todo.get = (requestProps, callback) => {
 // Update user
 handler.todo.put = (requestProps, callback) => {
     // get the data from user
+    const id = typeof requestProps.queryString.todoId === "string" ? requestProps.queryString.todoId.trim() : false;
+
     const title = typeof requestProps.body.title === "string" && requestProps.body.title.length > 0 ? requestProps.body.title.trim() : false;
 
     const description = typeof requestProps.body.description === "string" && requestProps.body.description.length > 0 ? requestProps.body.description.trim() : false;
@@ -115,30 +117,43 @@ handler.todo.put = (requestProps, callback) => {
     const token = typeof requestProps.headers.token === "string" && requestProps.headers.token.length === 20 ? requestProps.headers.token : false;
 
 
-    if (phonenumber && (title || description || endingDate)) {
+    if (phonenumber && id && (title || description || endingDate)) {
 
         verify(phonenumber, token, (err) => {
-            if (err) {
+            if (!err) {
                 read("users", phonenumber, (err1, user) => {
-                    const data = { ...user.todos };
-                    const updatedData = {
-                        firstname: firstname || data.firstname,
-                        lastname: lastname || data.lastname,
-                        password: password || data.password,
-                        agreement: agreement || data.agreement
-                    }
-
                     if (!err1 && user.firstname) {
-                        console.log("reading error", err1);
-                        update("users", phonenumber, updatedData, (err2) => {
-                            console.log(err2);
-                            if (err2) {
-                                callback(500, { message: "Couldn't Update user!" })
+                        // get the searched todo
+                        const searchedTodo = user.todos.find(todo => todo.id === id);
+                        // checking the todo found or not
+                        if (searchedTodo) {
+                            // update the searched todo
+                            const updatedTodo = {
+                                id: id,
+                                title: title || searchedTodo.title,
+                                description: description ||
+                                    searchedTodo.description,
+                                endingDate: endingDate ||
+                                    searchedTodo.endingDate,
                             }
-                            else {
-                                callback(200, { message: "User Updated successfully" });
-                            }
-                        });
+                            // destructure the user object and separate user data
+                            const { todos, ...rest } = user;
+                            // get the todos except updated todo
+                            const remainingTodos = todos.filter(todo => todo.id !== id);
+                            // create the new user with updated todo
+                            const updatedData = { ...rest, todos: [...remainingTodos, updatedTodo] };
+
+                            update("users", phonenumber, updatedData, (err2) => {
+                                if (!err2) {
+                                    callback(200, { message: "Todo Updated successfully" });
+                                }
+                                else {
+                                    callback(500, { message: "Couldn't Update Todo!" });
+                                }
+                            });
+                        } else {
+                            callback(400, { message: "Todo doesn't exists!" });
+                        }
 
                     } else {
                         callback(500, { message: "User is not exists!" })
